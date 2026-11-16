@@ -109,7 +109,7 @@ modal('VICTORY','You defeated the '+enemy.name+'.<br><br><b>Rewards:</b> '+rewar
 }
 function defeat(){
 busy=true;const lost=Math.min(state.coins,Math.ceil(state.coins*.10));state.coins-=lost;save();update();
-modal('YOU WERE DEFEATED','You lost '+lost+' coins (10% of your carried coins). Your equipment and progress are safe.',[['RETRY BATTLE',()=>startBattle()],['MAIN MENU',()=>show('title')]]);
+modal('YOU WERE DEFEATED','You lost '+lost+' coins (10% of your carried coins). Your equipment and progress are safe.',[['RETRY BATTLE',()=>{state.hp=state.maxHp;state.sta=state.maxSta;state.mp=state.maxMp;save();startBattle()}],['MAIN MENU',()=>show('title')]]);
 }
 function modal(title,body,buttons){$('modalTitle').textContent=title;$('modalText').innerHTML=body;$('modalActions').innerHTML='';buttons.forEach(([label,fn])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>{$('modal').classList.remove('show');fn()};$('modalActions').appendChild(b)});$('modal').classList.add('show')}
 function inventory(){modal('INVENTORY','<b>Capacity:</b> 0 / 30 slots<br><br><b>Equipped weapon:</b> '+state.weapon+'<br><b>Equipped armor:</b> '+state.armor+'<br><br>Your inventory is empty. Loot and equipment will be added in a later phase.',[['BACK TO BATTLE',()=>{}]])}
