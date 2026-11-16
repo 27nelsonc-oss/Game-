@@ -85,7 +85,7 @@ $('heavyBtn').disabled=state.sta<3;$('sparkBtn').disabled=state.mp<3;$('mendBtn'
 function menus(which){['fightMenu','physicalMenu','magicMenu'].forEach(x=>$(x).classList.remove('show'));if(which)$(which).classList.add('show');['fightBtn','inventoryBtn','statusBtn','runBtn'].forEach(x=>$(x).style.display=which?'none':'block')}
 function startBattle(){
 const pick=enemies[Math.floor(Math.random()*enemies.length)];enemy={...pick,maxHp:pick.hp};turn='player';busy=false;menus(null);logLines=[];$('log').innerHTML='';show('battle');
-log('A wild '+enemy.name+' appears!');if(enemy.speed>state.speed){log(enemy.name+' is quicker and takes the first turn!');update();setTimeout(enemyTurn,650)}else{log('You are quicker. It is your turn!');update()}
+log('A wild '+enemy.name+' appears!');if(enemy.speed>state.speed){turn='enemy';log(enemy.name+' is quicker and takes the first turn!');update();setTimeout(enemyTurn,650)}else{log('You are quicker. It is your turn!');update()}
 }
 function endTurn(){if(!enemy||busy)return;busy=true;menus(null);state.sta=Math.min(state.maxSta,state.sta+2);state.mp=Math.min(state.maxMp,state.mp+1);update();if(enemy.hp<=0){victory();return}turn='enemy';setTimeout(enemyTurn,650)}
 function damage(target,amount){return Math.max(1,amount-target.defense)}
