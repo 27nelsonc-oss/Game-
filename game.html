@@ -1,1 +1,129 @@
-
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Greenwood — Adventure</title>
+<style>
+:root{--ink:#17251f;--panel:#243b32;--panel2:#304b3d;--gold:#f2c66d;--cream:#f4edda;--muted:#b9c8b6;--red:#df7770;--blue:#79b9df;--green:#8dc78b}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#17251f;color:var(--cream);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;display:grid;place-items:center;padding:18px}
+button{font:inherit;color:inherit;background:#3e604b;border:2px solid #8eaa85;border-bottom-width:4px;padding:12px 15px;cursor:pointer;transition:filter .12s,transform .12s}button:hover{filter:brightness(1.18)}button:active{transform:translateY(2px);border-bottom-width:2px}button:disabled{opacity:.4;cursor:not-allowed;filter:none}
+#app{width:min(100%,1000px);min-height:650px;background:#263d32;border:4px solid #a7b58b;box-shadow:0 0 0 5px #101a16,0 18px 60px #0008;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#1c3028;border-bottom:3px solid #71886c;gap:12px}h1{font-size:clamp(18px,3vw,26px);margin:0;color:var(--gold);letter-spacing:2px}header small{color:var(--muted)}
+main{padding:18px;display:flex;flex:1;flex-direction:column;gap:14px}
+.screen{display:none;flex:1;flex-direction:column;gap:14px}.screen.active{display:flex}
+.panel{background:var(--panel);border:2px solid #71886c;padding:14px;box-shadow:inset 0 0 0 2px #17251f}
+.menu-screen{justify-content:center;align-items:center;text-align:center;background:radial-gradient(ellipse at center,#45634b 0,#263d32 62%)}.menu-screen h2{font-size:clamp(30px,6vw,52px);color:var(--gold);margin:0;text-shadow:4px 4px #17251f}.subtitle{color:var(--muted);margin:0 0 20px}.menu-buttons{display:grid;gap:10px;width:min(100%,300px)}
+.top-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{background:#1b2e26;padding:9px;border:1px solid #617d65}.stat b{display:block;color:var(--gold);font-size:12px;margin-bottom:5px}.stat span{font-size:16px}
+.battlefield{min-height:230px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:12px;background:linear-gradient(#789b70 0 55%,#4c714c 55% 100%);border:3px solid #a6b58c;position:relative;overflow:hidden}
+.battlefield:after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;background:#314d38}
+.combatant{text-align:center;z-index:1;padding:10px}.sprite{font-size:clamp(64px,12vw,104px);line-height:1.3;filter:drop-shadow(4px 6px 0 #17251f66);image-rendering:pixelated}.enemy-name{font-weight:bold;color:#17251f;text-shadow:1px 1px #d6e0b5}.player-name{color:#fff;text-shadow:2px 2px #17251f}
+.health{height:12px;background:#17251f;border:1px solid #d6e0b5;margin:7px auto;max-width:190px}.health i{height:100%;display:block;background:#d66c63;width:100%;transition:width .2s}.mana i{background:#69aeda}.stamina i{background:#d6b65f}
+.battle-info{display:grid;grid-template-columns:1.1fr .9fr;gap:12px}.log{height:128px;overflow:auto;line-height:1.55;color:#d7e2d1;font-size:13px}.log p{margin:0 0 5px}.log p:first-child{color:var(--gold)}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;align-content:start}.actions button{min-height:48px}.actions .wide{grid-column:1/-1}.hint{color:var(--muted);font-size:12px;margin:0}
+.submenu{display:none;grid-column:1/-1;grid-template-columns:repeat(2,1fr);gap:7px}.submenu.show{display:grid}.back{background:#46534a}
+.modal{position:fixed;inset:0;background:#000a;display:none;place-items:center;padding:16px;z-index:5}.modal.show{display:grid}.modal-card{width:min(100%,480px);background:#263d32;border:3px solid var(--gold);padding:20px;box-shadow:0 10px 40px #0009}.modal-card h2{margin-top:0;color:var(--gold)}.modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+footer{padding:10px 18px;border-top:2px solid #71886c;background:#1c3028;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+@media(max-width:620px){body{padding:0}#app{min-height:100vh;border-width:0}.top-stats{grid-template-columns:repeat(2,1fr)}main{padding:10px}.battlefield{min-height:190px}.battle-info{grid-template-columns:1fr}.log{height:100px}.actions button{padding:11px 7px;font-size:12px}header{padding:12px}}
+</style>
+</head>
+<body>
+<div id="app">
+<header><h1>✦ GREENWOOD ✦</h1><small>AN ADVENTURER'S FIRST JOURNEY</small></header>
+<main>
+<section id="title" class="screen menu-screen active">
+<div style="font-size:66px">⚔️</div><h2>GREENWOOD</h2><p class="subtitle">A little adventure awaits beyond the trees.</p>
+<div class="menu-buttons"><button id="newGame">NEW GAME</button><button id="continueGame" disabled>CONTINUE</button><button id="settingsButton">SETTINGS</button></div>
+<p class="hint">Offline adventure • Progress is saved on this device</p>
+</section>
+<section id="battle" class="screen">
+<div class="top-stats">
+<div class="stat"><b>LEVEL</b><span id="level">1</span></div><div class="stat"><b>COINS</b><span id="coins">100</span></div><div class="stat"><b>STAGE</b><span id="stage">1</span></div><div class="stat"><b>AREA</b><span>Greenwood</span></div>
+</div>
+<div class="battlefield">
+<div class="combatant"><div class="sprite" id="playerSprite">🧝</div><div class="player-name">ADVENTURER</div><div class="health"><i id="playerHpBar"></i></div><small id="playerHpText"></small><div class="health stamina"><i id="staminaBar"></i></div><small id="staminaText"></small><div class="health mana"><i id="manaBar"></i></div><small id="manaText"></small></div>
+<div class="combatant"><div class="sprite" id="enemySprite">🟢</div><div class="enemy-name" id="enemyName">SLIME</div><div class="health"><i id="enemyHpBar"></i></div><small id="enemyHpText" style="color:#17251f"></small></div>
+</div>
+<div class="battle-info">
+<div class="panel"><b style="color:var(--gold)">BATTLE LOG</b><div class="log" id="log" aria-live="polite"></div></div>
+<div class="panel"><b style="color:var(--gold)">YOUR TURN</b><div class="actions" id="mainActions">
+<button id="fightBtn">⚔ FIGHT</button><button id="inventoryBtn">▣ INVENTORY</button><button id="statusBtn">♥ STATUS</button><button id="runBtn">↗ RUN</button>
+<div class="submenu" id="fightMenu"><button id="physicalBtn">PHYSICAL</button><button id="magicBtn">MAGIC</button><button class="back wide" id="backBtn">← BACK</button></div>
+<div class="submenu" id="physicalMenu"><button id="strikeBtn">STRIKE · 0 STA</button><button id="heavyBtn">HEAVY BLOW · 3 STA</button><button class="back wide" id="physicalBack">← BACK</button></div>
+<div class="submenu" id="magicMenu"><button id="sparkBtn">SPARK · 3 MP</button><button id="mendBtn">MEND · 4 MP</button><button class="back wide" id="magicBack">← BACK</button></div>
+</div><p class="hint" id="turnHint">Choose an action. Speed decides who acts first.</p></div>
+</div>
+</section>
+<section id="settings" class="screen menu-screen"><h2>SETTINGS</h2><p class="subtitle">A quiet adventure, just how you like it.</p><div class="panel" style="width:min(100%,360px);text-align:left"><p>Sound effects: Not included in this first version.</p><p>Gameplay: Offline</p><p>Save: Automatic on this device</p></div><button id="settingsBack">← BACK TO MENU</button></section>
+</main>
+<footer><span>GREENWOOD FOREST · PIXEL ADVENTURE</span><span>PHASE 1 · COMBAT FOUNDATION</span></footer>
+</div>
+<div class="modal" id="modal"><div class="modal-card"><h2 id="modalTitle">BATTLE RESULT</h2><div id="modalText"></div><div class="modal-actions" id="modalActions"></div></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const base={level:1,xp:0,coins:100,stage:1,maxHp:40,hp:40,maxSta:10,sta:10,maxMp:12,mp:12,attack:7,magic:8,defense:3,speed:6};
+let state={...base,weapon:'Worn sword',armor:'Traveler clothes',won:0};
+let enemy=null,turn='player',busy=false,screen='title',logLines=[];
+const enemies=[
+{name:'Slime',sprite:'🟢',hp:24,attack:5,defense:1,speed:3,xp:12,coins:12},
+{name:'Goblin',sprite:'👺',hp:34,attack:7,defense:2,speed:5,xp:18,coins:18}
+];
+const save=()=>{try{localStorage.setItem('greenwoodSaveV1',JSON.stringify(state));$('continueGame').disabled=false}catch(e){}};
+const load=()=>{try{const s=JSON.parse(localStorage.getItem('greenwoodSaveV1'));if(s&&s.level===1){state={...base,...s};return true}}catch(e){}return false};
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');screen=id}
+function log(msg){logLines.unshift(msg);logLines=logLines.slice(0,30);$('log').innerHTML=logLines.map((x,i)=>'<p>'+x+'</p>').join('')}
+function bar(id,value,max){$(id).style.width=Math.max(0,Math.min(100,value/max*100))+'%'}
+function update(){
+$('level').textContent=state.level;$('coins').textContent=state.coins;$('stage').textContent=state.stage;
+$('playerHpText').textContent='HP '+state.hp+'/'+state.maxHp;$('staminaText').textContent='STA '+state.sta+'/'+state.maxSta;$('manaText').textContent='MP '+state.mp+'/'+state.maxMp;
+bar('playerHpBar',state.hp,state.maxHp);bar('staminaBar',state.sta,state.maxSta);bar('manaBar',state.mp,state.maxMp);
+if(enemy){$('enemyName').textContent=enemy.name.toUpperCase();$('enemySprite').textContent=enemy.sprite;$('enemyHpText').textContent='HP '+enemy.hp+'/'+enemy.maxHp;bar('enemyHpBar',enemy.hp,enemy.maxHp)}
+$('continueGame').disabled=!localStorage.getItem('greenwoodSaveV1');
+$('heavyBtn').disabled=state.sta<3;$('sparkBtn').disabled=state.mp<3;$('mendBtn').disabled=state.mp<4||state.hp===state.maxHp;
+}
+function menus(which){['fightMenu','physicalMenu','magicMenu'].forEach(x=>$(x).classList.remove('show'));if(which)$(which).classList.add('show');['fightBtn','inventoryBtn','statusBtn','runBtn'].forEach(x=>$(x).style.display=which?'none':'block')}
+function startBattle(){
+const pick=enemies[Math.floor(Math.random()*enemies.length)];enemy={...pick,maxHp:pick.hp};turn='player';busy=false;menus(null);logLines=[];$('log').innerHTML='';show('battle');
+log('A wild '+enemy.name+' appears!');if(enemy.speed>state.speed){log(enemy.name+' is quicker and takes the first turn!');update();setTimeout(enemyTurn,650)}else{log('You are quicker. It is your turn!');update()}
+}
+function endTurn(){if(!enemy||busy)return;busy=true;menus(null);state.sta=Math.min(state.maxSta,state.sta+2);state.mp=Math.min(state.maxMp,state.mp+1);update();if(enemy.hp<=0){victory();return}turn='enemy';setTimeout(enemyTurn,650)}
+function damage(target,amount){return Math.max(1,amount-target.defense)}
+function playerAttack(kind){
+if(busy||turn!=='player'||!enemy)return;
+let amount=0;
+if(kind==='strike'){amount=damage(enemy,state.attack);log('You strike for '+amount+' damage.')}
+if(kind==='heavy'){if(state.sta<3)return;state.sta-=3;amount=damage(enemy,Math.floor(state.attack*1.8));log('Your heavy blow deals '+amount+' damage!')}
+if(kind==='spark'){if(state.mp<3)return;state.mp-=3;amount=Math.max(1,state.magic+5-enemy.defense);log('Spark hits for '+amount+' magic damage!')}
+if(kind==='mend'){if(state.mp<4||state.hp===state.maxHp)return;state.mp-=4;const healed=Math.min(12,state.maxHp-state.hp);state.hp+=healed;log('Mend restores '+healed+' HP.')}
+if(amount)enemy.hp=Math.max(0,enemy.hp-amount);update();endTurn()
+}
+function enemyTurn(){
+if(!enemy||state.hp<=0)return;busy=false;turn='enemy';const raw=enemy.attack;const hit=damage({defense:state.defense},raw);state.hp=Math.max(0,state.hp-hit);log(enemy.name+' attacks for '+hit+' damage.');
+if(state.hp<=0){update();defeat();return}
+state.sta=Math.min(state.maxSta,state.sta+1);state.mp=Math.min(state.maxMp,state.mp+1);turn='player';update();$('turnHint').textContent='Your turn! Choose your next action.'
+}
+function victory(){
+busy=true;const reward=enemy.coins,xp=enemy.xp;state.coins+=reward;state.xp+=xp;state.won++;log('Victory! +'+reward+' coins · +'+xp+' XP');save();update();
+modal('VICTORY','You defeated the '+enemy.name+'.<br><br><b>Rewards:</b> '+reward+' coins and '+xp+' XP.',[['NEXT ENCOUNTER',()=>{state.stage++;save();startBattle()}],['MAIN MENU',()=>{show('title')} ]]);
+}
+function defeat(){
+busy=true;const lost=Math.min(state.coins,Math.ceil(state.coins*.10));state.coins-=lost;save();update();
+modal('YOU WERE DEFEATED','You lost '+lost+' coins (10% of your carried coins). Your equipment and progress are safe.',[['RETRY BATTLE',()=>startBattle()],['MAIN MENU',()=>show('title')]]);
+}
+function modal(title,body,buttons){$('modalTitle').textContent=title;$('modalText').innerHTML=body;$('modalActions').innerHTML='';buttons.forEach(([label,fn])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>{$('modal').classList.remove('show');fn()};$('modalActions').appendChild(b)});$('modal').classList.add('show')}
+function inventory(){modal('INVENTORY','<b>Capacity:</b> 0 / 30 slots<br><br><b>Equipped weapon:</b> '+state.weapon+'<br><b>Equipped armor:</b> '+state.armor+'<br><br>Your inventory is empty. Loot and equipment will be added in a later phase.',[['BACK TO BATTLE',()=>{}]])}
+function status(){modal('CHARACTER STATUS','<b>Level:</b> '+state.level+'<br><b>HP:</b> '+state.hp+'/'+state.maxHp+'<br><b>Stamina:</b> '+state.sta+'/'+state.maxSta+'<br><b>Mana:</b> '+state.mp+'/'+state.maxMp+'<br><b>Attack:</b> '+state.attack+'<br><b>Magic:</b> '+state.magic+'<br><b>Defense:</b> '+state.defense+'<br><b>Speed:</b> '+state.speed+'<br><br>Regeneration is based on your stats and happens between turns.',[['BACK TO BATTLE',()=>{}]])}
+$('newGame').onclick=()=>{state={...base};save();startBattle()};
+$('continueGame').onclick=()=>{if(load())startBattle()};
+$('settingsButton').onclick=()=>show('settings');$('settingsBack').onclick=()=>show('title');
+$('fightBtn').onclick=()=>menus('fightMenu');$('physicalBtn').onclick=()=>menus('physicalMenu');$('magicBtn').onclick=()=>menus('magicMenu');
+$('backBtn').onclick=()=>menus(null);$('physicalBack').onclick=()=>menus('fightMenu');$('magicBack').onclick=()=>menus('fightMenu');
+$('strikeBtn').onclick=()=>playerAttack('strike');$('heavyBtn').onclick=()=>playerAttack('heavy');$('sparkBtn').onclick=()=>playerAttack('spark');$('mendBtn').onclick=()=>playerAttack('mend');
+$('inventoryBtn').onclick=inventory;$('statusBtn').onclick=status;
+$('runBtn').onclick=()=>{if(busy||turn!=='player')return;if(Math.random()<.65){log('You escaped safely!');menus(null);save();modal('ESCAPED','You got away. No coins were lost.',[['CONTINUE',()=>startBattle()],['MAIN MENU',()=>show('title')]])}else{log('Escape failed!');endTurn()}};
+load();update();
+})();
+</script>
+</body>
+</html>
