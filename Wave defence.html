@@ -97,7 +97,7 @@
   'use strict';
   const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
   const $ = id => document.getElementById(id);
-  const ui = { overlay:$('overlay'), title:$('title'), eyebrow:$('eyebrow'), message:$('message'), start:$('startBtn'), shop:$('shop'), pause:$('pauseBtn'), wave:$('waveText'), scrap:$('scrapText'), enemies:$('enemyText'), playerHp:$('playerHpText'), baseHp:$('baseHpText'), playerBar:document.querySelector('.health-wrap .bar i'), baseBar:document.querySelector('#baseBar i'), pulse:$('pulseBtn'), pulseLabel:$('pulseLabel'), joy:$('joystick'), knob:$('joyKnob'), hint:$('controlHint'), toast:$('toast') };
+  const ui = { overlay:$('overlay'), title:$('title'), eyebrow:$('eyebrow'), message:$('message'), start:$('startBtn'), shop:$('shop'), pause:$('pauseBtn'), wave:$('waveText'), scrap:$('scrapText'), enemies:$('enemyText'), playerHp:$('playerHpText'), baseHp:$('baseHpText'), playerBar:document.querySelector('.health-wrap .bar i'), baseBar:document.querySelector('#baseBar i'), pulse:$('pulseBtn'),controlsNote: $('controlsNote'), pulseLabel:$('pulseLabel'), joy:$('joystick'), knob:$('joyKnob'), hint:$('controlHint'), toast:$('toast') };
   let W=0,H=0,dpr=1,last=0,gameState='title',wave=0,scrap=0,spawnLeft=0,spawnTimer=0,betweenTimer=0,elapsed=0,screenShake=0,toastTimer=0;
   let player,base,enemies=[],bullets=[],enemyShots=[],particles=[],turrets=[],keys={},pointer={x:0,y:0,down:false,active:false},joy={active:false,id:null,x:0,y:0,dx:0,dy:0},fireCooldown=0,pulseCooldown=0,fireRate=0.25,enemySerial=0;
   const rand=(a,b)=>a+Math.random()*(b-a), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
