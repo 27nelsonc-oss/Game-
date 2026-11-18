@@ -2,85 +2,163 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>YouTube to TXT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube Transcript to TXT</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 500px; margin: 4rem auto; padding: 0 1rem; }
     input, button { width: 100%; padding: 0.75rem; margin-top: 0.75rem; font-size: 1rem; box-sizing: border-box; }
     button { background: #cc0000; color: white; border: none; cursor: pointer; font-weight: bold; }
     button:hover { background: #a30000; }
-    #status { margin-top: 1rem; color: #333; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    #status { margin-top: 1rem; color: #333; line-height: 1.5; }
+    .hint { color: #555; font-size: 0.9rem; line-height: 1.5; }
   </style>
 </head>
 <body>
   <h2>YouTube Transcript to .TXT</h2>
-  <input type="text" id="urlInput" placeholder="Paste YouTube URL here...">
-  <button onclick="downloadTranscript()">Download .TXT</button>
-  <p id="status"></p>
+  <p class="hint">Paste a public YouTube video link. The video must have captions available.</p>
+  <input type="url" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." autocomplete="url">
+  <button id="downloadButton" type="button">Download .TXT</button>
+  <p id="status" role="status" aria-live="polite"></p>
 
   <script>
-    function extractVideoID(url) {
-      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
-      return match ? match[1] : null;
+    const proxyBase = "https://api.allorigins.win/get?url=";
+
+    function extractVideoID(input) {
+      try {
+        const url = new URL(input);
+        const host = url.hostname.replace(/^www\./, "").toLowerCase();
+        let id = null;
+
+        if (host === "youtu.be") {
+          id = url.pathname.split("/").filter(Boolean)[0];
+        } else if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+          if (url.pathname === "/watch") id = url.searchParams.get("v");
+          else id = url.pathname.match(/^\/(?:shorts|embed|live)\/([^/?]+)/)?.[1];
+        }
+
+        return id && /^[0-9A-Za-z_-]{11}$/.test(id) ? id : null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function fetchThroughProxy(targetUrl) {
+      const response = await fetch(proxyBase + encodeURIComponent(targetUrl));
+      if (!response.ok) throw new Error(`The proxy returned HTTP ${response.status}.`);
+
+      const result = await response.json();
+      if (typeof result.contents !== "string") {
+        throw new Error("The proxy did not return the requested page.");
+      }
+      if (result.status && result.status.http_code >= 400) {
+        throw new Error(`YouTube returned HTTP ${result.status.http_code}.`);
+      }
+      return result.contents;
+    }
+
+    function findCaptionTracks(pageHtml) {
+      const keyIndex = pageHtml.indexOf('"captionTracks"');
+      if (keyIndex < 0) return [];
+      const arrayStart = pageHtml.indexOf("[", keyIndex);
+      if (arrayStart < 0) return [];
+
+      // Find the matching closing bracket without being confused by brackets in strings.
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      for (let i = arrayStart; i < pageHtml.length; i++) {
+        const char = pageHtml[i];
+        if (inString) {
+          if (escaped) escaped = false;
+          else if (char === "\\") escaped = true;
+          else if (char === '"') inString = false;
+          continue;
+        }
+        if (char === '"') inString = true;
+        else if (char === "[") depth++;
+        else if (char === "]" && --depth === 0) {
+          try { return JSON.parse(pageHtml.slice(arrayStart, i + 1)); }
+          catch { return []; }
+        }
+      }
+      return [];
+    }
+
+    function transcriptFromResponse(contents) {
+      // YouTube's json3 format is more reliable than parsing XML entities manually.
+      try {
+        const data = JSON.parse(contents);
+        if (Array.isArray(data.events)) {
+          return data.events
+            .map(event => (event.segs || []).map(segment => segment.utf8 || "").join(""))
+            .filter(Boolean)
+            .join("\n")
+            .trim();
+        }
+      } catch { /* The response may be XML; try that below. */ }
+
+      const xml = new DOMParser().parseFromString(contents, "text/xml");
+      if (xml.querySelector("parsererror")) throw new Error("The captions were returned in an unsupported format.");
+      return Array.from(xml.getElementsByTagName("text"), node => node.textContent || "")
+        .filter(Boolean)
+        .join("\n")
+        .trim();
     }
 
     async function downloadTranscript() {
-      const url = document.getElementById('urlInput').value.trim();
-      const status = document.getElementById('status');
-      const videoId = extractVideoID(url);
+      const input = document.getElementById("urlInput").value.trim();
+      const status = document.getElementById("status");
+      const button = document.getElementById("downloadButton");
+      const videoId = extractVideoID(input);
 
       if (!videoId) {
-        status.textContent = "Invalid YouTube URL.";
+        status.textContent = "Enter a valid YouTube link (watch, youtu.be, Shorts, or embed URL).";
         return;
       }
 
-      status.textContent = "Fetching transcript...";
-
+      button.disabled = true;
+      status.textContent = "Loading the video captions…";
       try {
-        // Uses a public CORS proxy to fetch the YouTube watch page
-        const proxy = "https://allorigins.win";
-        const target = encodeURIComponent(`https://youtube.com{videoId}`);
-        const res = await fetch(proxy + target);
-        const data = await res.json();
-
-        // Extract caption track URL from page HTML
-        const captionMatch = data.contents.match(/"captionTracks":(\[.*?\])/);
-        if (!captionMatch) {
-          status.textContent = "No captions found for this video.";
-          return;
+        const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en`;
+        const pageHtml = await fetchThroughProxy(watchUrl);
+        const tracks = findCaptionTracks(pageHtml);
+        if (!tracks.length) {
+          throw new Error("No captions were found. This video may not have captions, or YouTube may have blocked the proxy request.");
         }
 
-        const tracks = JSON.parse(captionMatch[1]);
-        const trackUrl = tracks[0].baseUrl;
+        // Prefer manually supplied captions, then English, then any available track.
+        const track = tracks.find(item => item.kind !== "asr")
+          || tracks.find(item => item.languageCode?.startsWith("en"))
+          || tracks[0];
+        const captionUrl = new URL(track.baseUrl);
+        captionUrl.searchParams.set("fmt", "json3");
 
-        // Fetch the XML transcript via proxy
-        const xmlRes = await fetch(proxy + encodeURIComponent(trackUrl));
-        const xmlData = await xmlRes.json();
+        status.textContent = "Downloading the transcript…";
+        const contents = await fetchThroughProxy(captionUrl.toString());
+        const transcript = transcriptFromResponse(contents);
+        if (!transcript) throw new Error("The captions were empty.");
 
-        // Parse XML text nodes
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlData.contents, "text/xml");
-        const textNodes = xmlDoc.getElementsByTagName("text");
-
-        let transcript = "";
-        for (let node of textNodes) {
-          transcript += node.textContent
-            .replace(/&#39;/g, "'")
-            .replace(/&quot;/g, '"')
-            .replace(/&amp;/g, "&") + "\n";
-        }
-
-        // Trigger .txt file download
-        const blob = new Blob([transcript.trim()], { type: "text/plain;charset=utf-8" });
+        const blobUrl = URL.createObjectURL(new Blob([transcript], { type: "text/plain;charset=utf-8" }));
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
+        link.href = blobUrl;
         link.download = `${videoId}-transcript.txt`;
+        document.body.appendChild(link);
         link.click();
-
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
         status.textContent = "Done! Check your downloads.";
-      } catch (err) {
-        status.textContent = "Error fetching transcript. The proxy may be busy or the video is restricted.";
+      } catch (error) {
+        status.textContent = `${error.message || "Could not fetch the transcript."} If this keeps happening, try a video with captions or use YouTube's transcript panel and copy the text; a browser-only page cannot reliably bypass YouTube or proxy restrictions.`;
+      } finally {
+        button.disabled = false;
       }
     }
+
+    document.getElementById("downloadButton").addEventListener("click", downloadTranscript);
+    document.getElementById("urlInput").addEventListener("keydown", event => {
+      if (event.key === "Enter") downloadTranscript();
+    });
   </script>
 </body>
 </html>
