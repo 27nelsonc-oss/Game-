@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube to TXT</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 500px; margin: 4rem auto; padding: 0 1rem; }
+    input, button { width: 100%; padding: 0.75rem; margin-top: 0.75rem; font-size: 1rem; box-sizing: border-box; }
+    button { background: #cc0000; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { background: #a30000; }
+    #status { margin-top: 1rem; color: #333; }
+  </style>
+</head>
+<body>
+  <h2>YouTube Transcript to .TXT</h2>
+  <input type="text" id="urlInput" placeholder="Paste YouTube URL here...">
+  <button onclick="downloadTranscript()">Download .TXT</button>
+  <p id="status"></p>
+
+  <script>
+    function extractVideoID(url) {
+      const match = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
+      return match ? match[1] : null;
+    }
+
+    async function downloadTranscript() {
+      const url = document.getElementById('urlInput').value.trim();
+      const status = document.getElementById('status');
+      const videoId = extractVideoID(url);
+
+      if (!videoId) {
+        status.textContent = "Invalid YouTube URL.";
+        return;
+      }
+
+      status.textContent = "Fetching transcript...";
+
+      try {
+        // Uses a public CORS proxy to fetch the YouTube watch page
+        const proxy = "https://allorigins.win";
+        const target = encodeURIComponent(`https://youtube.com{videoId}`);
+        const res = await fetch(proxy + target);
+        const data = await res.json();
+
+        // Extract caption track URL from page HTML
+        const captionMatch = data.contents.match(/"captionTracks":(\[.*?\])/);
+        if (!captionMatch) {
+          status.textContent = "No captions found for this video.";
+          return;
+        }
+
+        const tracks = JSON.parse(captionMatch[1]);
+        const trackUrl = tracks[0].baseUrl;
+
+        // Fetch the XML transcript via proxy
+        const xmlRes = await fetch(proxy + encodeURIComponent(trackUrl));
+        const xmlData = await xmlRes.json();
+
+        // Parse XML text nodes
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlData.contents, "text/xml");
+        const textNodes = xmlDoc.getElementsByTagName("text");
+
+        let transcript = "";
+        for (let node of textNodes) {
+          transcript += node.textContent
+            .replace(/&#39;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/&amp;/g, "&") + "\n";
+        }
+
+        // Trigger .txt file download
+        const blob = new Blob([transcript.trim()], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${videoId}-transcript.txt`;
+        link.click();
+
+        status.textContent = "Done! Check your downloads.";
+      } catch (err) {
+        status.textContent = "Error fetching transcript. The proxy may be busy or the video is restricted.";
+      }
+    }
+  </script>
+</body>
+</html>
